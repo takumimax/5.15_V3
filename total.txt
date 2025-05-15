@@ -1,0 +1,227 @@
+//main.cpp
+#include <iostream>
+#include <unistd.h>
+#include <termios.h>
+#include <fcntl.h>
+#include "Maze.h"
+#include "Player.h"
+
+void setNonBlockingInput() {
+    termios ttystate;
+    tcgetattr(STDIN_FILENO, &ttystate);
+    ttystate.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &ttystate);
+
+    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+}
+
+void resetInput() {
+    termios ttystate;
+    tcgetattr(STDIN_FILENO, &ttystate);
+    ttystate.c_lflag |= (ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &ttystate);
+
+    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, flags & ~O_NONBLOCK);
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "使用方式: " << argv[0] << " inputfile\n";
+        return 1;
+    }
+
+    Maze maze;
+    Player player;
+
+    if (!maze.loadMap(argv[1], player)) {
+        std::cerr << "讀取地圖失敗\n";
+        return 1;
+    }
+
+    setNonBlockingInput();
+    std::cout << "\033[?25l";     // 隱藏游標
+    std::cout << "\033[?1049h";   // 啟用替代 buffer，防止 scrollback 倒出
+    maze.draw(player);
+
+    while (true) {
+        char key;
+        if (read(STDIN_FILENO, &key, 1) > 0) {
+            if (key == 'e') break;
+
+            int oldX, oldY;
+            player.getPosition(oldX, oldY);
+
+            bool goal = player.move(key, maze);
+            if (goal) break;
+
+            maze.draw(player);
+            std::cout.flush();
+        }
+        usleep(10000);
+    }
+
+    resetInput();
+    std::cout << "\033[?25h";     // 顯示游標
+    std::cout << "\033[?1049l";   // 回到主 buffer
+    std::cout << "\n遊戲結束，請按 Enter...";
+    std::cin.ignore();
+    std::cin.get();
+    return 0;
+}
+
+
+//Maze.h
+#ifndef MAZE_H
+#define MAZE_H
+
+#include <vector>
+#include <string>
+
+class Player; // Forward declaration
+
+class Maze {
+private:
+    std::vector<std::string> mapData;
+    int height = 0, width = 0;
+
+public:
+    bool loadMap(const std::string& filename, Player& player);
+    void draw(const Player& player) const;
+    bool isWall(int x, int y) const;
+    bool isGoal(int x, int y) const;
+    char getTile(int x, int y) const;
+    int getHeight() const;
+    int getWidth() const;
+};
+
+#endif
+
+//Maze.cpp
+#include "Maze.h"
+#include "Player.h"
+#include <fstream>
+#include <iostream>
+
+bool Maze::loadMap(const std::string& filename, Player& player) {
+    std::ifstream file(filename);
+    if (!file) return false;
+
+    mapData.clear();
+    std::string line;
+    while (std::getline(file, line)) {
+        mapData.push_back(line);
+    }
+
+    height = mapData.size();
+    width = mapData.empty() ? 0 : mapData[0].size();
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            if (mapData[y][x] == '0') {
+                player.setPosition(x, y);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void Maze::draw(const Player& player) const {
+    std::cout << "\033[2J\033[H"; // clear screen
+    int px, py;
+    player.getPosition(px, py);
+
+    for (int y = 0; y < height; ++y) {
+        // Print each row three times
+        for (int v = 0; v < 3; ++v) {
+            for (int x = 0; x < width; ++x) {
+                char drawChar;
+                if (x == px && y == py) {
+                    drawChar = 'P';
+                } else {
+                    switch (mapData[y][x]) {
+                        case '1': drawChar = '*'; break;
+                        case '0': drawChar = ' '; break;
+                        case '2': drawChar = '@'; break;
+                        default: drawChar = '?'; break;
+                    }
+                }
+                // Print each character three times
+                for (int h = 0; h < 3; ++h) {
+                    std::cout << drawChar;
+                }
+            }
+            std::cout << '\n';
+        }
+    }
+}
+
+bool Maze::isWall(int x, int y) const {
+    return mapData[y][x] == '1';
+}
+
+bool Maze::isGoal(int x, int y) const {
+    return mapData[y][x] == '2';
+}
+
+char Maze::getTile(int x, int y) const {
+    return mapData[y][x];
+}
+
+int Maze::getHeight() const { return height; }
+int Maze::getWidth() const { return width; }
+
+//Player.h
+#ifndef PLAYER_H
+#define PLAYER_H
+
+class Maze;
+
+class Player {
+private:
+    int x = 0, y = 0;
+
+public:
+    void setPosition(int startX, int startY);
+    void getPosition(int& outX, int& outY) const;
+    bool move(char input, const Maze& maze);
+};
+
+#endif
+
+//Player.cpp
+#include "Player.h"
+#include "Maze.h"
+
+void Player::setPosition(int startX, int startY) {
+    x = startX;
+    y = startY;
+}
+
+void Player::getPosition(int& outX, int& outY) const {
+    outX = x;
+    outY = y;
+}
+
+bool Player::move(char input, const Maze& maze) {
+    int newX = x, newY = y;
+    switch (input) {
+        case 'w': newY--; break;
+        case 's': newY++; break;
+        case 'a': newX--; break;
+        case 'd': newX++; break;
+    }
+
+    if (newX < 0 || newX >= maze.getWidth() || newY < 0 || newY >= maze.getHeight())
+        return false;
+
+    if (maze.isWall(newX, newY))
+        return false;
+
+    x = newX;
+    y = newY;
+
+    return maze.isGoal(x, y);
+}
