@@ -12,6 +12,9 @@ private:
 
     bool reachedGoal = false;
 
+    int keysCollected = 0;
+    static const int totalKeys = 3;
+
 public:
     void setPosition(int startX, int startY);
     void getPosition(int& outX, int& outY) const;
@@ -35,6 +38,11 @@ public:
 
     void reachGoal() ;
     bool hasReachedGoal() const;
+
+
+    void collectKey();
+    int getKeyCount() const;
+    int getTotalKeys() const;
 };
 
 #endif

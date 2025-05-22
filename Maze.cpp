@@ -4,10 +4,15 @@
 #include "Goal.h"
 #include "Empty.h"
 #include "Obstacle.h"
+#include "Key.h"
 #include <queue>
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <random>
+#include <algorithm>
+
+int Maze::totalKeys = 3; 
 
 bool Maze::loadMap(const std::string& filename, Player& player) {
     std::ifstream file(filename);
@@ -95,6 +100,36 @@ bool Maze::loadMap(const std::string& filename, Player& player) {
         updateVisibility(player);
     }
 
+    // ---- 隨機放置 3 把 Key ----
+    std::vector<std::pair<int, int>> emptyPositions;
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            if (std::dynamic_pointer_cast<Empty>(getBlock(x, y))) {
+                emptyPositions.emplace_back(x, y);
+            }
+        }
+    }
+
+    // 確保有足夠空位
+    if (emptyPositions.size() < 3) {
+        std::cerr << "Error: Not enough empty space to place keys!" << std::endl;
+        return false;
+    }
+
+    // 隨機打亂並選前3個位置
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::shuffle(emptyPositions.begin(), emptyPositions.end(), gen);
+
+    for (int i = 0; i < 3; ++i) {
+        int keyX = emptyPositions[i].first;
+        int keyY = emptyPositions[i].second;
+        replaceBlockAt(keyX, keyY, std::make_shared<Key>());
+        mapData[keyY][keyX]='k';
+    }
+
+
+    //return
     return playerSet;
 }
 
@@ -174,6 +209,7 @@ void Maze::replaceWithEmpty(int x, int y) {
     if (inBounds(x, y)) {
         blocks[y][x] = std::make_shared<Empty>();
     }
+    mapData[y][x]='0';
 }
 
 bool Maze::isWall(int x, int y) const {
@@ -182,6 +218,10 @@ bool Maze::isWall(int x, int y) const {
 
 bool Maze::isGoal(int x, int y) const {
     return inBounds(x, y) && mapData[y][x] == '2';
+}
+
+bool Maze::isKey(int x,int y) const {
+    return  inBounds(x, y) && mapData[y][x] =='k';
 }
 
 char Maze::getNumChar(int x, int y) const {
@@ -202,4 +242,13 @@ std::shared_ptr<Block> Maze::getBlock(int x, int y) const {
 
 bool Maze::inBounds(int x, int y) const {
     return x >= 0 && x < width && y >= 0 && y < height;
+}
+
+void Maze::setTotalKeys(int k)
+{
+    totalKeys=k;
+}
+
+int Maze::getTotalKeys() {
+    return totalKeys;
 }
