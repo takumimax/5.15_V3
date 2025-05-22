@@ -18,7 +18,11 @@ std::shared_ptr<Obstacle> Obstacle::create(Maze* maze,
     const std::vector<std::pair<int,int>>& positions) 
 {
     auto shared = std::make_shared<SharedData>();
+<<<<<<< HEAD
     shared->hp = 2 ; // 初始血量
+=======
+    shared->hp = 2;  // 初始血量
+>>>>>>> 55add80a9f9ce9daf51f0451934f768d2c007f60
     shared->maze = maze;
     shared->positions = positions;  // 一次傳入所有位置
 
