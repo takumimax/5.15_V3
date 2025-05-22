@@ -1,11 +1,11 @@
+// main.cpp
 #include <iostream>
 #include <unistd.h>
 #include <termios.h>
 #include <fcntl.h>
-#include <limits>     // 為了 std::numeric_limits
+#include <limits>
 #include "Maze.h"
 #include "Player.h"
-#include "Block.h"
 
 void setNonBlockingInput() {
     termios ttystate;
@@ -35,7 +35,6 @@ int main(int argc, char* argv[]) {
 
     Maze maze;
     Player player;
-    Block block;
 
     if (!maze.loadMap(argv[1], player)) {
         std::cerr << "讀取地圖失敗\n";
@@ -45,39 +44,50 @@ int main(int argc, char* argv[]) {
     setNonBlockingInput();
     std::cout << "\033[?25l";     // 隱藏游標
     std::cout << "\033[?1049h";   // 啟用替代 buffer
-    maze.draw(player, block);
+    maze.draw(player);
+    player.drawStatus(maze.getHeight() * 3);
 
     while (true) {
         char key;
         if (read(STDIN_FILENO, &key, 1) > 0) {
             if (key == 'e') break;
 
-            int oldX, oldY;
-            player.getPosition(oldX, oldY);
+            bool moved = player.move(key, maze);
 
-            bool goal = player.move(key, maze);
-            if (goal) break;
+            // 移動成功後再檢查是否抵達終點
+            if (moved && player.hasReachedGoal()) break;
 
-            maze.draw(player, block);
-            std::cout.flush();
+            // 新增死亡判斷
+            if (player.isDead()) {
+                maze.draw(player);
+                player.drawStatus(maze.getHeight() * 3);
+                
+                break;
+            }
+
+
+            player.drawStatus(maze.getHeight() * 3);
+            // 只有移動成功才需要重畫
+            if (moved) {
+                maze.draw(player);
+                player.drawStatus(maze.getHeight() * 3);
+                std::cout.flush();
+            }
         }
         usleep(10000);
     }
 
-    // 先恢復輸入模式
     resetInput();
 
     std::cout << "\033[?25h";     // 顯示游標
     std::cout << "\033[?1049l";   // 回到主 buffer
 
-    // 輸出結束訊息
+    if (player.isDead()) std::cout << "\n你已死亡，遊戲結束！\n";
+
     std::cout << "\n遊戲結束，請按 Enter...";
 
-    // 清除 std::cin 緩衝區，避免殘留輸入卡住
     std::cin.clear();
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-    // 等待使用者按下 Enter
     std::cin.get();
 
     return 0;

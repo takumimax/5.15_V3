@@ -1,40 +1,23 @@
 #include "Block.h"
 
-Block::Block() {
-    tileMap['1'] = {
-        "***",
-        "***",
-        "***"
-    };
-    tileMap['0'] = {
+const std::vector<std::string>& Block::getTile() const {
+    static const std::vector<std::string> unknown = {
         "   ",
         "   ",
         "   "
     };
-    tileMap['2'] = {
-        "&$&",
-        "$&$",
-        "#$#"
-    };
-}
 
-const std::vector<std::string>& Block::getTile(char tileType) const {
-    auto it = tileMap.find(tileType);
-    if (it != tileMap.end()) {
-        return it->second;
+    static const std::vector<std::string> fog = {
+        " . ",
+        " . ",
+        " . "
+    };
+
+    if (visible) {
+        return getRealTile(); // subclass 提供實際樣式
+    } else if (discovered) {
+        return getRealTile();
+    } else {
+        return unknown;
     }
-    static const std::vector<std::string> unknown = {
-        "???",
-        "???",
-        "???"
-    };
-    return unknown;
-}
-
-std::vector<std::string> Block::getPlayerTile() const {
-    return {
-        " O ",
-        "/|/",
-        "/ \\",
-    };
 }

@@ -1,0 +1,180 @@
+1.Smart_ptr Intro
+    Smart_ptr主要是避免memory leak的問題
+
+    有時候可能new了東西出來忘記delete，或是在一些比較複雜的情況下你可能不知道何時該delete
+
+    當然記憶體管理對於C++來說是非常重要的，對於開發者來說也是很重要的基本功
+
+    但如果都能由系統來handle記憶體管理的事情，在開發上會省去很多麻煩
+
+    在C++11(或以後)的版本，STL裡面就有提供這樣的東西
+
+    主要又分成三種：unique_ptr、shared_ptr、weak_ptr
+
+    1-1.用法
+        1-1-1.使用他們三個時要 #include <memory>
+        1-1-2.創建智慧指標:
+            smart_ptr<型態> ptr( new 型態的建構子 ) //new建構子可以決定要不要帶參數
+            也可以用: smart_ptr<型態> make_shared<型態>(->如果有參數就放這<-)
+
+3.shared_ptr
+    3-1.Intro
+    std::shared_ptr 是可以讓多個 std::shared_ptr 共享一份記憶體，
+    並且在最後一個 std::shared_ptr 生命週期結束時時自動釋放記憶體，
+
+    3-2.用法
+        3-2-1.
+            shared_ptr<int> a;
+            shared_ptr<int> b(new int(5));
+            a=b;
+
+            // release ptr b, but ptr a exist, 
+            //so memory dosen't be released. counter = 5.
+
+            cout << *a;
+
+        3-2-2.常用function
+            .use_count()
+                由其中一個shared_ptr呼叫 用來查看有幾個shared_ptr共用同一塊記憶體
+                如果這樣寫:
+                shared_ptr<A> ptr2 = ptr1;
+                .use_count()回傳值就+1
+
+            .reset()
+                由其中一個shared_ptr呼叫，手動釋放 這個share_ptr對記憶體 的所有權
+                shared_ptr的參考計數-1
+
+            .get()
+                回傳內部的裸指標(new)（不建議常用，除非必要）
+                shared_ptr<int> p = make_shared<int>(42);
+                int* raw = p.get();  // 取得裸指標，但不負責 delete！
+
+            .unique()
+                檢查自己是否是唯一持有者（use_count == 1）。
+                shared_ptr<int> p1 = make_shared<int>(100);
+                shared_ptr<int> p2 = p1;
+                cout << p1.unique() << endl;  // false（use_count == 2）
+                p2.reset();
+                cout << p1.unique() << endl;  // true（use_count == 1）
+
+            .swap(shared_ptr<T>& other)
+                與另一個 shared_ptr 交換管理的資源。
+                shared_ptr<int> a = make_shared<int>(10);
+                shared_ptr<int> b = make_shared<int>(20);
+
+                a.swap(b);
+                // 現在 a 是 20, b 是 10
+
+            operator*() / operator->()
+                解參考操作，可以像指標一樣使用物件。
+        
+        3-2-3.與工廠函式(Factory Function) 搭配:
+
+            #「工廠函式」是一種用來建立物件的函式，它封裝了物件的建立細節，
+            讓使用者不用知道 new、建構子參數、初始化邏輯等等，
+            只要呼叫這個函式就能安全地拿到一個建好的物件。
+
+            優點:
+                ✅ 隱藏建構細節（尤其是複雜的初始化過程）
+
+                ✅ 控制建立物件的方式（例如回傳 shared_ptr 或 unique_ptr）
+
+                ✅ 強迫使用 heap 建立物件、避免錯誤使用方式
+
+                ✅ 可以改為回傳已經建立的共用實例（singleton or pool）
+
+                ✅ 封裝物件建立邏輯
+
+                ✅ 可回傳智慧指標，自動記憶體管理
+
+                ✅ 可限制建構子存取權限（設為 private）
+
+                ✅ 更一致、更安全的建立介面
+                            
+
+            例子1:
+                class MyClass {
+                public:
+                    MyClass(int x) {
+                        // 複雜初始化...
+                    }
+
+                    static MyClass create(int x) {
+                        return MyClass(x);  // 傳值建立
+                    }
+                };
+
+                使用時: MyClass obj = MyClass::create(42);
+
+
+            例子2(配合smart_ptr):
+                                    //標頭//
+
+                class Maze;
+                class Player;
+
+                class Obstacle : public Block {
+                private:
+                    struct SharedData {
+                        int hp;
+                        std::vector<std::pair<int, int>> positions;
+                        Maze* maze;
+                    };
+
+                    std::shared_ptr<SharedData> data;
+
+                    // 私有建構子，外部無法直接 new
+                    Obstacle(std::shared_ptr<SharedData> shared);
+
+                                    //其他data member//
+
+                public:
+
+                    // 工廠函式，建立一組障礙 (會自行建立 SharedData 並加入所有位置)
+                    static std::shared_ptr<Obstacle> create(Maze* maze, 
+                        const std::vector<std::pair<int, int>>& positions);
+
+                                        //其他method//
+                };
+
+                #endif
+
+                //.cpp
+
+                    // 私有建構子
+                    Obstacle::Obstacle(std::shared_ptr<SharedData> shared) : data(shared) {}
+
+                    // 靜態工廠函式
+                    std::shared_ptr<Obstacle> Obstacle::create(Maze* maze, 
+                        const std::vector<std::pair<int,int>>& positions) 
+                    {
+                        auto shared = std::make_shared<SharedData>();
+                        shared->hp = 2  // 初始血量
+                        shared->maze = maze;
+                        shared->positions = positions;  // 一次傳入所有位置
+
+                        // 改成 new 並由 shared_ptr 管理，避免 private 建構子衝突
+                        return std::shared_ptr<Obstacle>(new Obstacle(shared));
+                    }
+
+            使用方式: auto obs = Obstacle::create(maze,positions)
+
+
+            🧠 為什麼工廠函式好用？
+
+            傳統作法	                        工廠函式作法
+            auto p = new A(...);	            auto p = A::create(...);
+            auto p = make_shared<A>(...);	    auto p = A::create(...);
+            constructor 細節外部可見	         constructor 可以設成 private
+            易於誤用（記憶體洩漏）	              安全回傳智慧指標，防洩漏`
+
+
+                
+
+
+
+
+
+
+
+
