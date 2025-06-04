@@ -45,6 +45,8 @@ public:
     int getKeyCount() const;
 
     //void getPrevPosition(int& outX, int& outY) const;
+    
+    static unsigned long long int change_tile;
 
 
 };

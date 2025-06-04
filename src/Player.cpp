@@ -5,10 +5,18 @@
 #include <memory>  // 確保有包含這個標頭
 
 
-static const std::vector<std::string> playerTile = {
+unsigned long long int Player::change_tile=0;
+
+static const std::vector<std::string> playerTile_1 = {
     " o ",
     "/|/",
     "/ \\"
+};
+
+static const std::vector<std::string> playerTile_2 = {
+    " o ",
+    "\\|\\",
+    "\\ /"
 };
 
 void Player::setPosition(int startX, int startY) {
@@ -73,7 +81,17 @@ bool Player::move(char input, Maze& maze) {
 
 const std::vector<std::string>& Player::getTile() const 
 {
-    return playerTile;
+    if(change_tile%2){
+        Player::change_tile++;    
+        return playerTile_1;
+     }
+     else {
+         Player::change_tile++;
+         return playerTile_2;
+         
+     }
+     
+     
 }
 
 bool Player::isDead() const {
