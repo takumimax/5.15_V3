@@ -19,6 +19,7 @@ std::shared_ptr<Obstacle> Obstacle::create(Maze* maze,
 {
     auto shared = std::make_shared<SharedData>();
     shared->hp = 2 ; // 初始血量
+
     shared->maze = maze;
     shared->positions = positions;  // 一次傳入所有位置
 
