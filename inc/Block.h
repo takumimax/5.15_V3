@@ -24,18 +24,17 @@ public:
     virtual void is_touched(Player& player) = 0;
 
     // 是否可見
-    bool isVisible() const { return visible; }
-    void setVisible(bool v) { visible = v; }
+    bool isVisible() const ;
+    void setVisible(bool v) ;
     
 
     // 是否已探索過
     
-    bool isDiscovered() const { return discovered; }
-    void setDiscovered(bool d) { discovered = d; }
+    bool isDiscovered() const ;
+    void setDiscovered(bool d) ;
 
     
 };
 
-using BlockPtr = std::shared_ptr<Block>;
 
 #endif

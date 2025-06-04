@@ -23,6 +23,8 @@ void Player::getPosition(int& outX, int& outY) const {
 
 bool Player::move(char input, Maze& maze) {
     int newX = x, newY = y;
+    //prev_x=x; prev_y=y;
+    
     switch (input) {
         case 'w': newY--; break;
         case 's': newY++; break;
@@ -41,6 +43,7 @@ bool Player::move(char input, Maze& maze) {
     if (maze.isWall(newX, newY))
         return false;
 
+
     // 如果是障礙物，先攻擊並阻止移動
     auto obstacle = std::dynamic_pointer_cast<Obstacle>(target);
     if (obstacle) {
@@ -54,6 +57,11 @@ bool Player::move(char input, Maze& maze) {
 
     x = newX;
     y = newY;
+    
+    if(maze.isKey(newX, newY))
+    {
+        maze.replaceWithEmpty(newX,newY);
+    }
 
     // 更新可見範圍
     maze.updateVisibility(*this);
@@ -87,7 +95,8 @@ void Player::drawStatus(int mapHeightLines) const {
     std::cout << "\033[2K";
 
     // 輸出狀態資訊
-    std::cout << "Health: " << getHealth() << "  Atk: " << getAtk() << std::flush;
+    std::cout << "Health: " << getHealth() << "  Atk: " << getAtk() << 
+    "  Keys: " << this->getKeyCount() << "/" << Maze::getTotalKeys()<< std::flush;
 }
 
 int Player::getHealth() const { return health; }
@@ -101,3 +110,19 @@ bool Player::hasReachedGoal() const { return reachedGoal; }
 
 void Player::collide() 
 { atk--; }
+
+void Player::collectKey() {
+    if (keysCollected < Maze::getTotalKeys()) keysCollected++;
+}
+
+int Player::getKeyCount() const {
+    return keysCollected;
+}
+
+// void Player::getPrevPosition(int& outX, int& outY) const
+// {
+//     outX=prev_x;
+//     outy=prev_y;
+// }
+
+

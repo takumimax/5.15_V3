@@ -13,6 +13,8 @@ private:
     std::vector<std::string> mapData;                
     std::vector<std::vector<std::shared_ptr<Block>>> blocks; // 改成 shared_ptr
     int height = 0, width = 0;
+    static int totalKeys;
+    
 
 public:
     ~Maze() = default;  // shared_ptr 自動清理
@@ -22,6 +24,7 @@ public:
 
     bool isWall(int x, int y) const;
     bool isGoal(int x, int y) const;
+    bool isKey(int x,int y) const;
     char getNumChar(int x, int y) const;
 
     int getHeight() const;
@@ -42,6 +45,10 @@ public:
     void replaceBlockAt(int x, int y, std::shared_ptr<Block> newBlock);
 
     void setMapCharAt(int x, int y, char ch);
+
+    static void setTotalKeys(int);
+
+    static int getTotalKeys() ;
 };
 
 #endif

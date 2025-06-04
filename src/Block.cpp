@@ -21,3 +21,13 @@ const std::vector<std::string>& Block::getTile() const {
         return unknown;
     }
 }
+
+
+bool Block::isVisible() const { return visible; }
+void Block::setVisible(bool v) { visible = v; }
+
+
+// 是否已探索過
+
+bool Block::isDiscovered() const { return discovered; }
+void Block::setDiscovered(bool d) { discovered = d; }

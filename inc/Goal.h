@@ -4,6 +4,7 @@
 #include "Block.h"
 
 class Goal : public Block {
+
 public:
     Goal() = default;
     virtual ~Goal() = default;
